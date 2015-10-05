@@ -3,6 +3,6 @@
 *.RData
 *.pdf
 *.png
-*/*.html
+*.html
 *.zip
-txt
+*.txt
