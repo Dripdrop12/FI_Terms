@@ -1,0 +1,94 @@
+---
+title: "FI Consulting Core Terms"
+output:
+  html_document:
+    theme: united
+    toc: yes
+---
+
+<style>
+table{margin:auto;}
+.smaller_table th{font-size:13px;} td{font-size:12px;}
+.narrow_table75 {width: 75%; margin-left: auto; margin-right: auto;}
+.narrow_table50 {width: 50%; margin-left: auto; margin-right: auto;}
+</style>
+
+
+```{r setup, include=FALSE}
+
+library(knitr)
+library(DT)
+library(wordcloud)
+library(dplyr)
+
+options(stringsAsFactors = F)
+opts_chunk$set(echo = FALSE, results='asis', size="small", fig.align = 'center')
+
+# load data
+load('../cache/news.RData')
+
+# source functions
+source('../code/functions/tm_functions.R')
+
+# define junk terms
+junk <- c('will','we',
+          'fi consulting', 'fi team')
+
+
+```
+
+
+
+# Most Frequent Terms 
+
+## Search Most Frequent Terms  {.narrow_table75}
+```{r freq_terms_tbl}
+
+df_cloud <- get_unigrams_df(news$txt, junk, max.rows = 300)
+
+datatable(
+    data = df_cloud,
+    class = 'row-border stripe compact order-column hover')
+```
+
+## Word Cloud
+```{r freq_terms_cloud, fig.width=8,fig.height=7}
+# print wordcloud:
+set.seed(995)
+wordcloud(df_cloud$word, df_cloud$freq, scale=c(2.75,0.8), max.words = 200,
+          random.order=FALSE, rot.per=.35,  
+          use.r.layout=FALSE,colors=brewer.pal(8, 'Dark2'))
+```
+
+
+## Two-Word Terms (Bigrams)
+```{r freq_terms_cloud_bi, fig.width=8,fig.height=7}
+# Bigrams
+BigramTokenizer <-
+  function(x)
+    unlist(lapply(ngrams(words(x), 2), paste, collapse = " "), use.names = FALSE)
+
+tdm.bi <- 
+  docs %>% 
+  tm_map(removePunctuation) %>% 
+  tm_map(content_transformer(tolower)) %>% 
+  tm_map(removeNumbers) %>% 
+  tm_map(removePunctuation) %>% 
+  tm_map(removeWords, stopwords('english')) %>% 
+  tm_map(removeWords, junk) %>% 
+  tm_map(stripWhitespace) %>% 
+  TermDocumentMatrix(control = list(tokenize = BigramTokenizer)) 
+
+df.bi <- 
+  data.frame(word = rownames(tdm.bi),
+             freq = rowSums(as.matrix(tdm.bi))) %>%
+  arrange(-freq)
+
+set.seed(821)
+wordcloud(df.bi$word, df.bi$freq, scale=c(1.5,0.5),max.words = 300,
+          random.order=FALSE, rot.per=0.0,  
+          use.r.layout=FALSE,colors=brewer.pal(8, 'Dark2'))
+
+```
+
+

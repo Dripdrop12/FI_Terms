@@ -1,0 +1,107 @@
+---
+title: "FI Consulting Core Terms: Analysis"
+params:
+   term: analysis
+   node_fontsize: 15
+   corr_level: 5
+output:
+  html_document:
+    theme: united
+    toc: yes
+---
+
+<style>
+table{margin:auto;}
+.smaller_table th{font-size:13px;} td{font-size:12px;}
+.narrow_table75 {width: 75%; margin-left: auto; margin-right: auto;}
+.narrow_table50 {width: 50%; margin-left: auto; margin-right: auto;}
+</style>
+
+
+```{r setup, include=FALSE}
+
+library(knitr)
+library(ggplot2)
+library(ggthemes)
+library(DT)
+library(scales)
+library(Rgraphviz)
+# library(wordcloud)
+library(d3heatmap)
+library(dygraphs)
+library(dplyr)
+
+options(stringsAsFactors = F)
+opts_chunk$set(echo = FALSE, results='asis', size="small", fig.align = 'center')
+theme_set(theme_pander())
+
+# load data
+load('../cache/news.RData')
+
+# source functions
+source('../code/functions/tm_functions.R')
+source('../code/functions/tm_term_functions.R')
+
+# define junk terms
+junk <- c('will','we',
+          'fi consulting', 'fi team')
+
+
+```
+
+
+
+
+```{r term_setup, include=FALSE}
+term <- params$term
+term_tm <- get_term_tm(news, term, junk, min.freq = 1000)
+```
+
+## Correlated Terms
+```{r term_corr}
+ggplot(data = term_tm$df, aes(freq, corr)) +
+    theme_few() +
+    geom_point(color = 'blue') +
+    labs(title=paste0("Terms associated with the word '", term,"'"), 
+         x='Frequency',y='Correlation') +
+    geom_text(aes(label=ifelse(freq>=100 | (corr>=0.20),
+                               word,'')),hjust=-0.1,vjust=-0.1)
+
+```
+
+## Term Network Graph
+```{r term_netw}
+plot(term_tm$tdm, 
+     terms = term_tm$dict %>% head(10), 
+     corThreshold = term_tm$df$corr[params$corr_level], 
+     y='dot', 
+     attrs=list(node=list(fontsize=params$node_fontsize, 
+                          fillcolor='lightsteelblue')))
+
+```
+
+## Term Clustering
+```{r term_clust, fig.width=9}
+plot(term_tm$clust, main=NULL)
+rect.hclust(term_tm$clust, k=7, border="orange")
+```
+
+## Heatmap
+```{r term_heat, fig.width=9, fig.height=12}
+d3heatmap(term_tm$mat, scale = "row", 
+          colors = 'Spectral', 
+          k_col = 10, k_row=7)
+```
+
+## Heatmap Related Documents
+```{r term_news}
+# docs table
+term.news.tbl <- term_tm$news %>% 
+    select(-txt) 
+
+datatable(term.news.tbl,
+          class = 'row-border stripe compact order-column hover',
+          rownames = T, escape = F)
+
+```
+
